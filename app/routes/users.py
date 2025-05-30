@@ -1,62 +1,58 @@
 from flask import jsonify
 from app.application import app
-
+from books import load_data,save_data
+import uuid
 
 @app.route("/api/v1/users")
 def get_users():
-    """
-    Get all users
-
-    Returns:
-        list: List of users
-    """
-    return jsonify({"users": []})
+    data=load_data()
+    return jsonify({"users":data["users"]})
 
 
 @app.route("/api/v1/users/<user_id>")
 def get_user(user_id: str):
-    """
-    Get a user by id
-
-    Args:
-        user_id (str): The id of the user
-
-    Returns:
-        dict: User details
-
-    Raises:
-        NotFound: If the user is not found
-    """
-    return jsonify({"user": {}})
+    data=load_data()
+    user=next((u for u in data["users"] if u["id"]==user_id),None)
+    if not user:
+        raise NotFound("User not found")
+    return jsonify({"user":user})
 
 
 @app.route("/api/v1/users", methods=["POST"])
 def create_user():
-    """
-    Create a new user
+    body = request.get_json()
+    if not body or "name" not in body:
+        raise BadRequest("Invalid request body. 'name' is required.")
 
-    Returns:
-        dict: User details
+    data = load_data()
 
-    Raises:
-        BadRequest: If the request body is invalid
-    """
-    return jsonify({"user": {}})
+    new_user = {
+        "id": str(uuid.uuid4()),
+        "name": body["name"],
+        "reserved_books": []
+    }
+
+    data["users"].append(new_user)
+    save_data(data)
+
+    return jsonify({"user": new_user})
+
 
 
 @app.route("/api/v1/users/<user_id>", methods=["PUT"])
 def update_user(user_id: str):
-    """
-    Update a user by id
+    body = request.get_json()
+    if not body or "name" not in body:
+        raise BadRequest("Invalid request body. 'name' is required.")
 
-    Args:
-        user_id (str): The id of the user
+    data = load_data()
+    users = data["users"]
+    user = next((u for u in users if u["id"] == user_id), None)
 
-    Returns:
-        dict: User details
+    if not user:
+        raise NotFound("User not found")
 
-    Raises:
-        BadRequest: If the request body is invalid
-        NotFound: If the user is not found
-    """
-    return jsonify({"user": {}})
+    user["name"] = body["name"]
+    save_data(data)
+
+    return jsonify({"user": user})
